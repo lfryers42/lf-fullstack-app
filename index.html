@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>List App</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>My List</h1>
+    </header>
+    <div class="container">
+        <div class="column" id="todo">
+            <h2>To Do</h2>
+            <div class="task-list" id="todo-list"></div>
+        </div>
+        <div class="column" id="inprogress">
+            <h2>In Progress</h2>
+            <div class="task-list" id="inprogress-list"></div>
+        </div>
+        <div class="column" id="done">
+            <h2>Done</h2>
+            <div class="task-list" id="done-list"></div>
+        </div>
+    </div>
+        <!-- Wrapper for delete dropzone and buttons -->
+    <div class="action-wrapper">
+        
+        <div class="action-buttons">
+            <button class="action-button" id="add-task-btn">➕</button>
+        </div>
+        
+        <div id="delete-dropzone" class="dropzone">🗑️</div>
+
+       
+        <div class="action-buttons">
+            <button class="action-button" id="voice-input-btn">🎤</button>
+        </div>
+    </div>
+        <!-- Button to unhide all hidden tasks -->
+        <div class="action-buttons">
+            <button class="action-button" id="unhide-all-btn">Unhide All Tasks</button>
+        </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
