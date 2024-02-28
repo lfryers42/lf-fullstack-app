@@ -2,10 +2,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const todoList = document.getElementById('todo-list');
     const inProgressList = document.getElementById('inprogress-list');
     const doneList = document.getElementById('done-list');
-    
+
     // Function to fetch tasks
     function fetchTasks() {
-        fetch('/tasks')
+        fetch('http://localhost:5000/tasks')
         .then(response => {
             if (!response.ok) {
                 throw new Error('Failed to fetch tasks');
@@ -21,11 +21,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Function to create task cards and display them on the board
+    // Function to display tasks on the board
     function displayTasksOnBoard(tasks) {
         tasks.forEach(task => {
             const taskCard = createTaskCard(task);
-            const columnId = task.listId;
+            // Append task card to appropriate column based on task status
+            const columnId = task.Status.toLowerCase().replace(' ', ''); // Assumes column IDs match task statuses
             const column = document.getElementById(columnId);
             if (column) {
                 const taskList = column.querySelector('.task-list');
@@ -38,32 +39,242 @@ document.addEventListener('DOMContentLoaded', function() {
 
     window.addEventListener('DOMContentLoaded', fetchTasks);
 
-
-
-    // Function to create a new task card
-    function createTaskCard(taskData) {
+    function createTaskCard(task) {
         const card = document.createElement('div');
         card.classList.add('card');
-        card.draggable = true; // Make the card draggable
-        card.setAttribute('data-task-id', taskData.id); // Set task ID as a data attribute
-        updateTaskStatus(taskData); // Update task status based on its column
-        card.innerHTML = `
-            <div class="card-content">
-                <div><strong>Description:</strong> ${taskData.description}</div>
-                <div><strong>Notes:</strong> ${taskData.notes}</div>
-                <div><strong>Status:</strong> ${taskData.status}</div>
-                <div><strong>Hidden:</strong> <input type="checkbox" ${taskData.hidden ? 'checked' : ''}></div>
-            </div>
-        `;
+        card.draggable = true;
+        card.setAttribute('data-task-id', task._id); // Assign task ID to data-task-id attribute
+    
+        // Create card content
+        const taskId = document.createElement('div');
+        taskId.innerHTML = `<strong>ID:</strong> ${task._id}`;
+    
+        const description = document.createElement('div');
+        description.classList.add('description');
+        description.innerHTML = `${task.Description}`;
+    
+        const notes = document.createElement('div');
+        notes.innerHTML = `<strong>Notes:</strong> ${task.Notes}`;
+    
+        const status = document.createElement('div');
+        status.innerHTML = `<strong>Status:</strong> ${task.Status}`;
+    
+        const hidden = document.createElement('div');
+        hidden.innerHTML = `<strong>Hidden:</strong> ${task.Hidden}`;
+    
+        // Buttons with arrows
+        const leftArrowButton = document.createElement('button');
+        leftArrowButton.textContent = '←';
+        leftArrowButton.classList.add('arrow-button');
+        leftArrowButton.addEventListener('click', function() {
+            moveTask(task._id, 'left');
+        });
+    
+        const rightArrowButton = document.createElement('button');
+        rightArrowButton.textContent = '→';
+        rightArrowButton.classList.add('arrow-button');
+        rightArrowButton.addEventListener('click', function() {
+            moveTask(task._id, 'right');
+        });
+    
+        // Delete button
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = '🗑️';
+        deleteButton.classList.add('delete-button');
+        deleteButton.addEventListener('click', function() {
+            deleteTask(task._id);
+        });
+    
+        // Append content and buttons to card
+        card.appendChild(description);
+        card.appendChild(notes);
+        card.appendChild(deleteButton);
+        card.appendChild(leftArrowButton);
+        card.appendChild(rightArrowButton);
+        
+    
         return card;
     }
+    
 
-    // Function to add a new task to the specified list
+    function moveTask(taskId, direction) {
+        fetch(`http://localhost:5000/tasks/${taskId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to fetch task data');
+            }
+            return response.json();
+        })
+        .then(taskData => {
+            const currentStatus = taskData.Status;
+            let newStatus;
+    
+            // Determine the new status based on the direction
+            if (direction === 'left') {
+                newStatus = getPreviousStatus(currentStatus);
+            } else if (direction === 'right') {
+                newStatus = getNextStatus(currentStatus);
+            }
+    
+            // Update the task status in the database
+            changeStatus(taskId, newStatus); // Call the changeStatus function
+    
+        })
+        .catch(error => {
+            console.error('Error fetching task data:', error);
+        });
+    }
+    
+    // Helper function to get the previous status
+    function getPreviousStatus(currentStatus) {
+        switch (currentStatus) {
+            case 'To Do':
+                return 'To Do'; // No change if already in the first column
+            case 'In Progress':
+                return 'To Do';
+            case 'Done':
+                return 'In Progress';
+            default:
+                return currentStatus;
+        }
+    }
+    
+    // Helper function to get the next status
+    function getNextStatus(currentStatus) {
+        switch (currentStatus) {
+            case 'To Do':
+                return 'In Progress';
+            case 'In Progress':
+                return 'Done';
+            case 'Done':
+                return 'Done'; // No change if already in the last column
+            default:
+                return currentStatus;
+        }
+    }
+    
+
+    // Function to add a new task to the specified list and database
     function addTaskToList(list, taskData) {
         const card = createTaskCard(taskData);
         list.appendChild(card);
         makeTaskDraggable(card); // Make the newly added card draggable
+
+        // Add task to the database
+        fetch('http://localhost:5000/tasks', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(taskData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to add task to database');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Task added to database:', data);
+            location.reload();
+        })
+        .catch(error => {
+            console.error('Error adding task to database:', error);
+        });
     }
+
+    // Add event listener to add button
+    document.getElementById('add-task-btn').addEventListener('click', function() {
+        const taskData = {
+            Description: prompt('Enter task description:'),
+            Notes: prompt('Enter task notes:'),
+            Status: 'To Do', // Default status
+            Hidden: false // Default hidden value
+        };
+        if (taskData.Description.trim() !== '') {
+            addTaskToList(todoList, taskData);
+        }
+    });
+
+    // Function to delete a task from the database and board
+    function deleteTask(taskId) {
+        fetch(`http://localhost:5000/tasks/${taskId}`, {
+            method: 'DELETE'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to delete task from database');
+            }
+            // Remove the task card from the board
+            const taskCard = document.querySelector(`.card[data-task-id="${taskId}"]`);
+            if (taskCard) {
+                taskCard.remove();
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Task deleted from database:', data);
+        })
+        .catch(error => {
+            console.error('Error deleting task from database:', error);
+        });
+    }
+
+// Function to change the status of a task in the database
+function changeStatus(taskId, newStatus) {
+    // Fetch the current task data
+    fetch(`http://localhost:5000/tasks/${taskId}`)
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to fetch task data');
+        }
+        return response.json();
+    })
+    .then(taskData => {
+        // Modify the task data with the new status
+        const updatedTaskData = {
+            ...taskData,
+            Status: newStatus
+        };
+
+        // Update the task status in the database
+        fetch(`http://localhost:5000/tasks/${taskId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updatedTaskData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to update task status in database');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Task status updated in database:', data);
+            // Move the card to the new column without modifying its content
+            const card = document.querySelector(`.card[data-task-id="${taskId}"]`);
+            if (card) {
+                const newColumnId = newStatus.toLowerCase().replace(' ', '');
+                const newColumn = document.getElementById(newColumnId);
+                if (newColumn) {
+                    const taskList = newColumn.querySelector('.task-list');
+                    if (taskList) {
+                        taskList.appendChild(card);
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error updating task status in database:', error);
+        });
+    })
+    .catch(error => {
+        console.error('Error fetching task data:', error);
+    });
+}
+
 
     // Function to make a task card draggable
     function makeTaskDraggable(card) {
@@ -71,95 +282,4 @@ document.addEventListener('DOMContentLoaded', function() {
             event.dataTransfer.setData('text/plain', event.target.dataset.taskId);
         });
     }
-
-    // Function to update task status based on column
-    function updateTaskStatus(taskData) {
-        const columnId = taskData.listId;
-        if (columnId === 'todo-list') {
-            taskData.status = 'To Do';
-        } else if (columnId === 'inprogress-list') {
-            taskData.status = 'In Progress';
-        } else if (columnId === 'done-list') {
-            taskData.status = 'Done';
-        }
-    }
-
-    // Function to update task hidden status
-    function updateTaskHidden(taskId, isHidden) {
-        const task = document.querySelector(`.card[data-task-id="${taskId}"]`);
-        if (task) {
-            task.style.display = isHidden ? 'none' : 'block';
-        }
-    }
-
-    // Add event listener to add button
-    document.getElementById('add-task-btn').addEventListener('click', function() {
-        const taskData = {
-            id: Date.now(), // Generate a unique ID for the task
-            description: prompt('Enter task description:'),
-            notes: prompt('Enter task notes:'),
-            listId: 'todo-list', // Default list ID
-            hidden: false // Default hidden value
-        };
-        if (taskData.description.trim() !== '') {
-            addTaskToList(todoList, taskData);
-        }
-    });
-
-    // Drag and drop event handlers for columns
-    const columns = document.querySelectorAll('.column');
-
-    columns.forEach(column => {
-        column.addEventListener('dragover', function(event) {
-            event.preventDefault();
-        });
-
-        column.addEventListener('drop', function(event) {
-            event.preventDefault();
-            const taskId = event.dataTransfer.getData('text/plain');
-            const task = document.querySelector(`.card[data-task-id="${taskId}"]`);
-            if (task) {
-                const targetColumn = column.querySelector('.task-list');
-                targetColumn.appendChild(task);
-                const taskData = {
-                    id: taskId,
-                    listId: targetColumn.id // Update task's list ID
-                };
-                updateTaskStatus(taskData); // Update task status
-                task.querySelector('.card-content div:nth-child(3)').textContent = `Status: ${taskData.status}`; // Update status in card
-            }
-        });
-    });
-
-    // Drag and drop event handlers for delete dropzone
-    const deleteDropzone = document.getElementById('delete-dropzone');
-    deleteDropzone.addEventListener('dragover', function(event) {
-        event.preventDefault();
-    });
-
-    deleteDropzone.addEventListener('drop', function(event) {
-        event.preventDefault();
-        const taskId = event.dataTransfer.getData('text/plain');
-        const task = document.querySelector(`.card[data-task-id="${taskId}"]`);
-        if (task) {
-            task.remove();
-        }
-    });
-
-    // Event listener for "Hidden" checkbox change
-    document.addEventListener('change', function(event) {
-        const checkbox = event.target;
-        if (checkbox.type === 'checkbox' && checkbox.parentNode.querySelector('strong').textContent === 'Hidden:') {
-            const taskId = checkbox.closest('.card').getAttribute('data-task-id');
-            updateTaskHidden(taskId, checkbox.checked);
-        }
-    });
-
-    // Event listener for "Unhide All Tasks" button
-    document.getElementById('unhide-all-btn').addEventListener('click', function() {
-        const hiddenTasks = document.querySelectorAll('.card[style="display: none;"]');
-        hiddenTasks.forEach(task => {
-            task.style.display = 'block';
-        });
-    });
 });

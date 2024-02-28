@@ -99,3 +99,54 @@ body {
 .card-content strong {
     color: #ddd;
 }
+
+.card .description {
+    font-weight: bold;
+    text-decoration: underline;
+    font-size: 1.5em; /* Adjust the size as needed */
+}
+
+
+/* CSS for delete button */
+.delete-button {
+    padding: 5px;
+    background-color: #ccc; /* Grey background */
+    color: #fff; /* White text color */
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.delete-button:hover {
+    background-color: #999; /* Darker grey on hover */
+}
+
+/* Styles for arrow buttons */
+.arrow-button {
+    background-color: #ccc; /* Grey background */
+    color: #fff; /* White text color */
+    border: none; /* No border */
+    border-radius: 5px; /* Rounded corners */
+    padding: 5px 10px; /* Padding */
+    cursor: pointer; /* Cursor style */
+    font-size: 16px; /* Font size */
+}
+
+/* Styles for arrow direction */
+.arrow-button.left::before {
+    content: '\u25C0'; /* Unicode for left arrow */
+}
+
+.arrow-button.right::before {
+    content: '\u25B6'; /* Unicode for right arrow */
+}
+
+/* Hover effect */
+.arrow-button:hover {
+    background-color: #999; /* Darker grey background on hover */
+}
+
+.card button {
+    margin-right: 5px; /* Adjust this value as needed */
+}
+
