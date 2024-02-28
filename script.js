@@ -282,4 +282,154 @@ function changeStatus(taskId, newStatus) {
             event.dataTransfer.setData('text/plain', event.target.dataset.taskId);
         });
     }
+
+    // Function to process recognized speech and create a task
+function processSpeech(speechText) {
+    try {
+        // Convert the recognized speech to lowercase for case-insensitive matching
+        const lowerCaseText = speechText.toLowerCase();
+
+        // Define keywords to identify description and notes
+        const descriptionKeyword = 'description';
+        const notesKeyword = 'notes';
+
+        // Find the index of keywords in the recognized text
+        const descriptionIndex = lowerCaseText.indexOf(descriptionKeyword);
+        const notesIndex = lowerCaseText.indexOf(notesKeyword);
+
+        // Check if both keywords are found
+        if (descriptionIndex !== -1) {
+            // Extract description
+            const description = speechText.substring(descriptionIndex + descriptionKeyword.length, notesIndex !== -1 ? notesIndex : speechText.length).trim();
+            
+            // Extract notes if available
+            const notes = notesIndex !== -1 ? speechText.substring(notesIndex + notesKeyword.length).trim() : '';
+
+            // Create task data object
+            const taskData = {
+                Description: description,
+                Notes: notes,
+                Status: 'To Do', // Default status
+                Hidden: false // Default hidden value
+            };
+
+            // Add the new task to the task list (You can use your existing function to add task)
+            addTaskToList(todoList, taskData);
+
+            console.log('Task created successfully:', taskData);
+        } else {
+            // Handle case when one or both keywords are not found
+            throw new Error('Keywords not found in the recognized text');
+        }
+    } catch (error) {
+        console.error('Error processing speech:', error);
+    }
+}
+// Select the microphone button
+const microphoneButton = document.getElementById('voice-input-btn');
+
+// Initialize SpeechRecognition object
+const recognition = new webkitSpeechRecognition(); // For Chrome
+
+// Set properties for recognition
+recognition.continuous = true; // Keep listening until stopped
+recognition.lang = 'en-US'; // Set language
+
+// Flag to track recognition state
+let isRecognizing = false;
+
+// Event listener for clicking the microphone button to start or stop recognition
+microphoneButton.addEventListener('click', () => {
+    if (!isRecognizing) {
+        // Start speech recognition
+        recognition.start();
+        isRecognizing = true;
+        microphoneButton.textContent = '🎤 Listening...';
+    } else {
+        // Stop speech recognition
+        recognition.stop();
+        isRecognizing = false;
+        microphoneButton.textContent = '🎤 ';
+    }
 });
+
+// Event listener for when speech is recognized
+recognition.onresult = (event) => {
+    const result = event.results[event.results.length - 1][0].transcript; // Get recognized text
+    // Do something with the recognized text, like update a text field
+    console.log('Speech recognized:', result);
+    processSpeech(result);
+};
+
+// Event listener for when recognition is ended
+recognition.onend = () => {
+    console.log('Speech recognition ended');
+    // Update button text when recognition ends
+    microphoneButton.textContent = '🎤 ';
+};
+
+// Event listener for errors in recognition
+recognition.onerror = (event) => {
+    console.error('Speech recognition error:', event.error);
+};
+
+});
+
+
+
+
+
+
+
+/*
+// Inside the processSpeech function
+async function processSpeech(speechText) {
+    try {
+        const apiKey = '30bce8595a51e466b528803918050e8e675e9d70'; 
+        const apiUrl = 'https://api.nlpcloud.io/summarization/bert2';
+
+        const requestBody = {
+            text: speechText, // Use the recognized speech text
+            num_sentences: 3 // Number of sentences in the summary
+        };
+
+        const requestOptions = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `API-Key ${apiKey}`
+            },
+            body: JSON.stringify(requestBody)
+        };
+
+        const corsProxyUrl = 'https://cors-anywhere.herokuapp.com/';
+        
+        // Using CORS Anywhere proxy
+        const response = await fetch(corsProxyUrl + apiUrl, requestOptions);
+        
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+
+        // Access the summary from the response data
+        const summary = data.summary;
+
+        // Create a new task with the summary as description and notes
+        const taskData = {
+            Description: summary,
+            Notes: '', // You can leave notes empty or add additional information here
+            Status: 'To Do', // Default status
+            Hidden: false // Default hidden value
+        };
+
+        // Add the new task to the task list (You can use your existing function to add task)
+        addTaskToList(todoList, taskData);
+
+        console.log('Task created successfully:', taskData);
+    } catch (error) {
+        console.error('Error processing speech:', error);
+    }
+}
+*/
+
