@@ -385,7 +385,7 @@ recognition.onerror = (event) => {
 // Inside the processSpeech function
 async function processSpeech(speechText) {
     try {
-        const apiKey = '30bce8595a51e466b528803918050e8e675e9d70'; 
+        const apiKey = ''; 
         const apiUrl = 'https://api.nlpcloud.io/summarization/bert2';
 
         const requestBody = {
