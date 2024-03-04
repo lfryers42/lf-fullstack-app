@@ -39,10 +39,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     window.addEventListener('DOMContentLoaded', fetchTasks);
 
+    //Function to create task
     function createTaskCard(task) {
         const card = document.createElement('div');
         card.classList.add('card');
-        card.draggable = true;
         card.setAttribute('data-task-id', task._id); // Assign task ID to data-task-id attribute
     
         // Create card content
@@ -91,8 +91,10 @@ document.addEventListener('DOMContentLoaded', function() {
         card.appendChild(deleteButton);
         card.appendChild(leftArrowButton);
         card.appendChild(rightArrowButton);
-        
-    
+
+        makeNotesEditable(notes);
+        makeDescriptionEditable(description);
+
         return card;
     }
     
@@ -158,7 +160,6 @@ document.addEventListener('DOMContentLoaded', function() {
     function addTaskToList(list, taskData) {
         const card = createTaskCard(taskData);
         list.appendChild(card);
-        makeTaskDraggable(card); // Make the newly added card draggable
 
         // Add task to the database
         fetch('http://localhost:5000/tasks', {
@@ -220,111 +221,278 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-// Function to change the status of a task in the database
-function changeStatus(taskId, newStatus) {
-    // Fetch the current task data
-    fetch(`http://localhost:5000/tasks/${taskId}`)
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Failed to fetch task data');
-        }
-        return response.json();
-    })
-    .then(taskData => {
-        // Modify the task data with the new status
-        const updatedTaskData = {
-            ...taskData,
-            Status: newStatus
-        };
-
-        // Update the task status in the database
-        fetch(`http://localhost:5000/tasks/${taskId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(updatedTaskData)
-        })
+    // Function to change the status of a task in the database
+    function changeStatus(taskId, newStatus) {
+        // Fetch the current task data
+        fetch(`http://localhost:5000/tasks/${taskId}`)
         .then(response => {
             if (!response.ok) {
-                throw new Error('Failed to update task status in database');
+                throw new Error('Failed to fetch task data');
             }
             return response.json();
         })
-        .then(data => {
-            console.log('Task status updated in database:', data);
-            // Move the card to the new column without modifying its content
-            const card = document.querySelector(`.card[data-task-id="${taskId}"]`);
-            if (card) {
-                const newColumnId = newStatus.toLowerCase().replace(' ', '');
-                const newColumn = document.getElementById(newColumnId);
-                if (newColumn) {
-                    const taskList = newColumn.querySelector('.task-list');
-                    if (taskList) {
-                        taskList.appendChild(card);
+        .then(taskData => {
+            // Modify the task data with the new status
+            const updatedTaskData = {
+                ...taskData,
+                Status: newStatus
+            };
+
+            // Update the task status in the database
+            fetch(`http://localhost:5000/tasks/${taskId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(updatedTaskData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to update task status in database');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Task status updated in database:', data);
+                // Move the card to the new column without modifying its content
+                const card = document.querySelector(`.card[data-task-id="${taskId}"]`);
+                if (card) {
+                    const newColumnId = newStatus.toLowerCase().replace(' ', '');
+                    const newColumn = document.getElementById(newColumnId);
+                    if (newColumn) {
+                        const taskList = newColumn.querySelector('.task-list');
+                        if (taskList) {
+                            taskList.appendChild(card);
+                        }
                     }
                 }
-            }
+            })
+            .catch(error => {
+                console.error('Error updating task status in database:', error);
+            });
         })
         .catch(error => {
-            console.error('Error updating task status in database:', error);
+            console.error('Error fetching task data:', error);
         });
-    })
-    .catch(error => {
-        console.error('Error fetching task data:', error);
-    });
-}
+    }
 
+    // Function to edit task description
+    function changeTaskDescription(taskId, newDescription) {
+        // Fetch the current task data
+        fetch(`http://localhost:5000/tasks/${taskId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to fetch task data');
+            }
+            return response.json();
+        })
+        .then(taskData => {
+            // Modify the task data with the new description
+            const updatedTaskData = {
+                ...taskData,
+                Description: newDescription
+            };
 
-    // Function to make a task card draggable
-    function makeTaskDraggable(card) {
-        card.addEventListener('dragstart', function(event) {
-            event.dataTransfer.setData('text/plain', event.target.dataset.taskId);
+            // Update the task details in the database
+            fetch(`http://localhost:5000/tasks/${taskId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(updatedTaskData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to update task details in database');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Task description updated in database:', data);
+                // Update the task card with the new description
+                const card = document.querySelector(`.card[data-task-id="${taskId}"]`);
+                if (card) {
+                    const descriptionElement = card.querySelector('.description');
+                    if (descriptionElement) {
+                        descriptionElement.textContent = `Description: ${newDescription}`;
+                    }
+                }
+                location.reload();
+            })
+            .catch(error => {
+                console.error('Error updating task description in database:', error);
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching task data:', error);
+        });
+    }
+
+    // Function to edit task notes
+    function changeTaskNotes(taskId, newNotes) {
+        // Fetch the current task data
+        fetch(`http://localhost:5000/tasks/${taskId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to fetch task data');
+            }
+            return response.json();
+        })
+        .then(taskData => {
+            // Modify the task data with the new notes
+            const updatedTaskData = {
+                ...taskData,
+                Notes: newNotes
+            };
+
+            // Update the task details in the database
+            fetch(`http://localhost:5000/tasks/${taskId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(updatedTaskData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to update task details in database');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Task notes updated in database:', data);
+                // Update the task card with the new notes
+                const card = document.querySelector(`.card[data-task-id="${taskId}"]`);
+                if (card) {
+                    const notesElement = card.querySelector('.notes');
+                    if (notesElement) {
+                        notesElement.textContent = `Notes: ${newNotes}`;
+                    }
+                }
+                location.reload();
+            })
+            .catch(error => {
+                console.error('Error updating task notes in database:', error);
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching task data:', error);
+        });
+    }
+
+    // Function to make the task description editable
+    function makeDescriptionEditable(element) {
+        // Add event listener for double-click to make the element editable
+        element.addEventListener('dblclick', function(event) {
+            const originalContent = element.textContent.trim();
+            const inputField = document.createElement('input');
+            inputField.value = originalContent;
+            element.textContent = '';
+            element.appendChild(inputField);
+            inputField.focus();
+
+            // Event listener to capture changes when the user finishes editing
+            inputField.addEventListener('blur', function() {
+                const newContent = inputField.value.trim();
+                // If the content has changed, update it in the database
+                if (newContent !== originalContent) {
+                    // Get the task ID from the dataset attribute
+                    const taskId = element.parentElement.dataset.taskId;
+                    // Update the task description
+                    changeTaskDescription(taskId, newContent);
+                } else {
+                    // If content is the same, revert back to original content
+                    element.textContent = originalContent;
+                }
+            });
+
+            // Event listener to capture changes when the user presses Enter
+            inputField.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter') {
+                    inputField.blur(); // Trigger blur event when Enter key is pressed
+                }
+            });
+        });
+    }
+
+    // Function to make the task notes editable
+    function makeNotesEditable(element) {
+        // Add event listener for double-click to make the element editable
+        element.addEventListener('dblclick', function(event) {
+            const originalContent = element.textContent.trim();
+            const inputField = document.createElement('input');
+            inputField.value = originalContent;
+            element.textContent = '';
+            element.appendChild(inputField);
+            inputField.focus();
+
+            // Event listener to capture changes when the user finishes editing
+            inputField.addEventListener('blur', function() {
+                const newContent = inputField.value.trim();
+                // If the content has changed, update it in the database
+                if (newContent !== originalContent) {
+                    // Get the task ID from the dataset attribute
+                    const taskId = element.parentElement.dataset.taskId;
+                    // Update the task notes
+                    changeTaskNotes(taskId, newContent);
+                } else {
+                    // If content is the same, revert back to original content
+                    element.textContent = originalContent;
+                }
+            });
+
+            // Event listener to capture changes when the user presses Enter
+            inputField.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter') {
+                    inputField.blur(); // Trigger blur event when Enter key is pressed
+                }
+            });
         });
     }
 
     // Function to process recognized speech and create a task
-function processSpeech(speechText) {
-    try {
-        // Convert the recognized speech to lowercase for case-insensitive matching
-        const lowerCaseText = speechText.toLowerCase();
+    function processSpeech(speechText) {
+        try {
+            // Convert the recognized speech to lowercase for case-insensitive matching
+            const lowerCaseText = speechText.toLowerCase();
 
-        // Define keywords to identify description and notes
-        const descriptionKeyword = 'description';
-        const notesKeyword = 'notes';
+            // Define keywords to identify description and notes
+            const descriptionKeyword = 'description';
+            const notesKeyword = 'notes';
 
-        // Find the index of keywords in the recognized text
-        const descriptionIndex = lowerCaseText.indexOf(descriptionKeyword);
-        const notesIndex = lowerCaseText.indexOf(notesKeyword);
+            // Find the index of keywords in the recognized text
+            const descriptionIndex = lowerCaseText.indexOf(descriptionKeyword);
+            const notesIndex = lowerCaseText.indexOf(notesKeyword);
 
-        // Check if both keywords are found
-        if (descriptionIndex !== -1) {
-            // Extract description
-            const description = speechText.substring(descriptionIndex + descriptionKeyword.length, notesIndex !== -1 ? notesIndex : speechText.length).trim();
-            
-            // Extract notes if available
-            const notes = notesIndex !== -1 ? speechText.substring(notesIndex + notesKeyword.length).trim() : '';
+            // Check if both keywords are found
+            if (descriptionIndex !== -1) {
+                // Extract description
+                const description = speechText.substring(descriptionIndex + descriptionKeyword.length, notesIndex !== -1 ? notesIndex : speechText.length).trim();
+                
+                // Extract notes if available
+                const notes = notesIndex !== -1 ? speechText.substring(notesIndex + notesKeyword.length).trim() : '';
 
-            // Create task data object
-            const taskData = {
-                Description: description,
-                Notes: notes,
-                Status: 'To Do', // Default status
-                Hidden: false // Default hidden value
-            };
+                // Create task data object
+                const taskData = {
+                    Description: description,
+                    Notes: notes,
+                    Status: 'To Do', // Default status
+                    Hidden: false // Default hidden value
+                };
 
-            // Add the new task to the task list (You can use your existing function to add task)
-            addTaskToList(todoList, taskData);
+                // Add the new task to the task list (You can use your existing function to add task)
+                addTaskToList(todoList, taskData);
 
-            console.log('Task created successfully:', taskData);
-        } else {
-            // Handle case when one or both keywords are not found
-            throw new Error('Keywords not found in the recognized text');
+                console.log('Task created successfully:', taskData);
+            } else {
+                // Handle case when one or both keywords are not found
+                throw new Error('Keywords not found in the recognized text');
+            }
+        } catch (error) {
+            console.error('Error processing speech:', error);
         }
-    } catch (error) {
-        console.error('Error processing speech:', error);
     }
-}
+
 // Select the microphone button
 const microphoneButton = document.getElementById('voice-input-btn');
 
@@ -375,17 +543,11 @@ recognition.onerror = (event) => {
 
 });
 
-
-
-
-
-
-
 /*
 // Inside the processSpeech function
 async function processSpeech(speechText) {
     try {
-        const apiKey = ''; 
+        const apiKey = AI_API_KEY; 
         const apiUrl = 'https://api.nlpcloud.io/summarization/bert2';
 
         const requestBody = {
