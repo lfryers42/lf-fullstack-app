@@ -11,7 +11,7 @@ CORS(app)
 import os
 connection_string = os.environ.get('DB_CONNECTION_STRING')
 # Connect to MongoDB Atlas
-client = MongoClient("connection_string")
+client = MongoClient(connection_string)
 db = client["List"]
 collection = db["Tasks"]
 
